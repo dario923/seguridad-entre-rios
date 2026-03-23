@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 from geopy.distance import geodesic
+from streamlit_js_eval import get_geolocation # IMPORTANTE: Requiere pip install streamlit-js-eval
 
 # --- FUNCIÓN DE PROCESAMIENTO ---
 @st.cache_data
@@ -31,18 +32,31 @@ def main():
 
     # --- SECCIÓN: VIDEO INSTITUCIONAL ---
     st.sidebar.divider()
-    # Podés cambiar este link por cualquier video de YouTube de la Policía
     url_video = "https://youtu.be/QcyJONgBcvM" 
     st.sidebar.video(url_video)
     st.sidebar.caption("Noticiero el once digital")
 
-    # --- SECCIÓN: MI UBICACIÓN ---
+    # --- SECCIÓN: MI UBICACIÓN DINÁMICA (JAVASCRIPT) ---
     st.sidebar.divider()
     st.sidebar.subheader("📍 Mi Ubicación")
     
-    # Coordenadas actuales (Viale por defecto)
-    mi_lat = st.sidebar.number_input("Latitud:", value=-31.8647, format="%.6f")
-    mi_lon = st.sidebar.number_input("Longitud:", value=-59.9128, format="%.6f")
+    # Intentamos obtener la ubicación real del dispositivo
+    loc = get_geolocation()
+
+    if loc:
+        # Si el navegador/celular da permiso, usamos las coordenadas reales
+        mi_lat = loc['coords']['latitude']
+        mi_lon = loc['coords']['longitude']
+        st.sidebar.success("✅ Ubicación detectada")
+    else:
+        # Si falla o está cargando, usamos Viale como backup
+        st.sidebar.warning("Esperando GPS... (Usando Viale por defecto)")
+        mi_lat = -31.8650
+        mi_lon = -59.7730
+
+    # Mostramos las coordenadas actuales en la barra lateral
+    st.sidebar.write(f"**Lat:** {mi_lat:.6f}")
+    st.sidebar.write(f"**Lon:** {mi_lon:.6f}")
     
     ordenar_cerca = st.sidebar.toggle("Ordenar por cercanía", value=True)
 
@@ -85,7 +99,7 @@ def main():
         )
         df_mostrar = df_mostrar.sort_values('distancia')
 
-    # Mapa principal (muestra las unidades filtradas)
+    # Mapa principal
     st.subheader("🗺️ Mapa de Unidades")
     st.map(df_mostrar[['lat', 'lon']])
 
@@ -117,6 +131,7 @@ def main():
                 else:
                     st.markdown("📞 **Teléfono:** No disponible")
                 
+                # Botón con link corregido para Google Maps
                 link_maps = f"https://www.google.com/maps?q={row['lat']},{row['lon']}"
                 st.link_button("🌐 Abrir en Google Maps", link_maps)
 
