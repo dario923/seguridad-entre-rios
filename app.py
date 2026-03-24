@@ -30,6 +30,13 @@ def main():
     st.sidebar.title("🚔 Navegación")
     pagina = st.sidebar.radio("Seleccioná el área:", list(SHEETS.keys()))
 
+    
+    # --- SECCIÓN: NOTICIAS LOCALES (NUEVO) ---
+    st.sidebar.divider()
+    st.sidebar.subheader("📰 Noticias de Entre Ríos")
+    st.sidebar.link_button("🌐 Ir a El Once Digital", "https://www.elonce.com/")
+    st.sidebar.caption("Acceso rápido al portal de noticias.")
+    
     # --- SECCIÓN: VIDEO INSTITUCIONAL ---
     st.sidebar.divider()
     url_video = "https://youtu.be/QcyJONgBcvM" 
@@ -40,21 +47,17 @@ def main():
     st.sidebar.divider()
     st.sidebar.subheader("📍 Mi Ubicación")
     
-    # Intentamos obtener la ubicación real del dispositivo
     loc = get_geolocation()
 
     if loc:
-        # Si el navegador/celular da permiso, usamos las coordenadas reales
         mi_lat = loc['coords']['latitude']
         mi_lon = loc['coords']['longitude']
         st.sidebar.success("✅ Ubicación detectada")
     else:
-        # Si falla o está cargando, usamos Viale como backup
         st.sidebar.warning("Esperando GPS... (Usando Viale por defecto)")
         mi_lat = -31.8650
         mi_lon = -59.7730
 
-    # Mostramos las coordenadas actuales en la barra lateral
     st.sidebar.write(f"**Lat:** {mi_lat:.6f}")
     st.sidebar.write(f"**Lon:** {mi_lon:.6f}")
     
@@ -85,24 +88,27 @@ def main():
 
     df_mostrar = df.copy()
     
-    # Filtrado por texto
     if busqueda:
         mask = (df_mostrar[col_titulo].str.contains(busqueda, case=False, na=False)) | \
                (df_mostrar['Ciudad'].str.contains(busqueda, case=False, na=False)) | \
                (df_mostrar['Dirección'].str.contains(busqueda, case=False, na=False))
         df_mostrar = df_mostrar[mask]
 
-    # Cálculo de distancias y ordenamiento
     if ordenar_cerca:
         df_mostrar['distancia'] = df_mostrar.apply(
             lambda row: calcular_distancia(mi_lat, mi_lon, row['lat'], row['lon']), axis=1
         )
         df_mostrar = df_mostrar.sort_values('distancia')
 
-    # Mapa principal
+    # --- MAPA CON MEJORA DE SCROLL ---
     st.subheader("🗺️ Mapa de Unidades")
-    st.map(df_mostrar[['lat', 'lon']])
-
+    
+    # Usamos un contenedor con altura fija (400px) para que no ocupe todo el alto del celu
+    # Esto obliga a que aparezca espacio libre a los costados para scrollear
+    with st.container():
+        st.map(df_mostrar[['lat', 'lon']], size=20, zoom=10)
+    
+    st.caption("💡 Tip: Si te trabás en el mapa, deslizá desde los bordes de la pantalla para bajar.")
     st.divider()
 
     # --- VISTA DE TARJETAS ---
@@ -117,7 +123,6 @@ def main():
                 st.markdown(f"**📍 Ciudad:** {row['Ciudad']}")
                 st.markdown(f"**🏠 Dirección:** {row['Dirección']}")
                 
-                # Teléfonos
                 tels = []
                 if 'Teléfono Guardia' in row and pd.notna(row['Teléfono Guardia']):
                     t1 = str(row['Teléfono Guardia']).replace('.0','')
@@ -131,9 +136,17 @@ def main():
                 else:
                     st.markdown("📞 **Teléfono:** No disponible")
                 
-                # Botón con link corregido para Google Maps
                 link_maps = f"https://www.google.com/maps?q={row['lat']},{row['lon']}"
                 st.link_button("🌐 Abrir en Google Maps", link_maps)
+
+    # ESPACIO EXTRA AL FINAL: Para que el usuario siempre pueda scrollear hasta el final
+    # sin que el mapa o las tarjetas queden cortadas.
+    st.write(" ")
+    st.write(" ")
+    st.divider()
+    st.center = st.caption("© 2024 Seguridad Entre Ríos - Provincia de Entre Ríos")
+    st.write(" ")
+    st.write(" ")
 
 if __name__=='__main__':
     main()
