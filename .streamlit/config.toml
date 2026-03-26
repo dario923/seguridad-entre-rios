@@ -1,0 +1,5 @@
+mkdir -p .streamlit
+cat <<EOF > .streamlit/config.toml
+[client]
+toolbarMode = "minimal"
+EOF
